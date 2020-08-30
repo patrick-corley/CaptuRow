@@ -6,7 +6,7 @@ import numpy as np
 import os
 
 cwd = os.getcwd()
-input_file_path = cwd + '\..\Reliable datasets\GOOD_DATALOG_29-8-2020_MODIFIED.txt'
+input_file_path = cwd + '\\..\\Reliable datasets\\GOOD_DATALOG_29-8-2020_MODIFIED.txt'
 
 class datalog:
     def __init__(self):
