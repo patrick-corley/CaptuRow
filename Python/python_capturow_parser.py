@@ -36,7 +36,7 @@ def plot_coords(sample_interval):
     for i in range (dlog.num_samples):
         if i % sample_interval == 0:
             folium.Marker([dlog.latitude[i], dlog.longitude[i]], icon=folium.Icon(color='red', icon='times', prefix='fa')).add_to(m)
-    m.save('index.html')
+    m.save('map.html')
 
 def calc_total_distance():
     tot_distance = 0
