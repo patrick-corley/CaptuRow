@@ -1,15 +1,16 @@
 # CaptuRow
 Hardware and software platform for capturing and analyzing rowing performance data.
 
-Folder Structure:
-Arduino:
+Folder Structure:  
+
+<b>Arduino</b>:
   - Firmware for data capture hardware (Atmega 328P + MMA8452 Accelerometer + Neo 6M GPS module + micro-SD card module)
 
-Python:
+<b>Python:</b>
   - Scripts for post-processing captured rowing data (acceleration on all axes, distance, speed, etc.)
   
-Octave:
+<b>Octave:</b>
   - More scripts for post-processing data (filtering, FFT, etc.) - May migrate to python in the future...
   
-Reliable Datasets:
+<b>Reliable Datasets:</b>
   - Contains good data from rowing sessions. Used as reference for development.
