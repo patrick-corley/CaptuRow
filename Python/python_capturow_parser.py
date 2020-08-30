@@ -3,13 +3,10 @@ import geopy.distance
 import math
 import matplotlib.pyplot as plt
 import numpy as np
+import os
 
-#input_file_path = 'C:/Users/patri/Desktop/python_speedcoach_parser/DATALOG_left_outside_16-8-2020.TXT'
-#input_file_path = 'C:/Users/patri/Desktop/python_speedcoach_parser/DATALOG_Single_14-8-2020_first_150_gone.txt'
-#input_file_path = 'C:/Users/patri/Desktop/python_speedcoach_parser/DATALOG_Single_14-8-2020.txt'
-#input_file_path = 'C:/Users/patri/Desktop/python_speedcoach_parser/DATALOG_250ms.txt'
-#input_file_path = 'C:/Users/patri/Desktop/python_speedcoach_parser/DATALOG_1ms.txt'
-input_file_path = 'C:/Users/patri/Desktop/python_speedcoach_parser/GOOD_DATALOG_MODIFIED.txt'
+cwd = os.getcwd()
+input_file_path = cwd + '\..\Reliable datasets\GOOD_DATALOG_29-8-2020_MODIFIED.txt'
 
 class datalog:
     def __init__(self):
