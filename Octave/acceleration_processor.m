@@ -1,15 +1,18 @@
-% Patrick Corley - 2020
-% Analysis script for accelerometer data captured from rowing sessions
+% Patrick Corley 2020 - patrick.urban90@gmail.com
+% CaptuRow post-processing script 
+% Analysis script for analyzing accelerometer data captured from rowing sessions
+% Accelerometer: MMA8452Q
+
 pkg load signal
 close all;
 
-aX = importdata('x_accel_small.txt');
+aX = importdata('x_accel_0.8667hz.txt');
 aX_negated = aX .* -1;
 aY = importdata('y_accel.txt');
 aY_negated = aY .* -1;
 aZ = importdata('z_accel.txt');
 aZ_negated = aZ .* -1;
-time_ms = importdata('time_ms_small.txt');
+time_ms = importdata('time_ms_0.8667hz.txt');
 
 ##all_axes_sum =  aX + aY + aZ;
 arr_size = length(aX);
@@ -31,25 +34,29 @@ aZ_avg_arr = aZ_avg.* ones(arr_size,1);
  
 x_points = linspace(0, arr_size - 1, arr_size);
 
-% Compute and plot FFt of acceleration data
-fs = 8; % sampling frequency
-% Number of frequency pins must be the next power of two after the number of 
-% samples we have 41633 -> 65536
-fft_size=2^nextpow2(arr_size);
+%-------------------------------------------------------------------------------
+% Compute and plot FFT of acceleration data
+% Setup Variables:
+% Accelerometer sampling frequency = 8 but Fs = 16 seems to produce a spectral
+% plot that seems to look like what it expected - need to investiagte this (?)
 
-% Generate frequency domain data (double-sided)
-X_double = fft(aX, fft_size);
+fs = 16; % sampling frequency
+f = fs*(0:(arr_size/2))/arr_size;
+% Number of frequency pins must be power of two... 41633 -> 65536
+fft_size=2^nextpow2(arr_size);
+%-------------------------------------------------------------------------------
+
 figure();
-subplot(3,2,1);
-plot(abs(X_double));
-title('X-Axis Two-sided Amplitude Spectrum');
-% Generate singler-sided frequency data 
-X_single = X_double(1:fft_size/2) * 2;
-% Convert frequency bins to actual frequency values (Hz)       
-f = fs*(0:fft_size/2 - 1)/fft_size;
-subplot(3,2,2);
-plot(f, abs(X_single));
+% Generate frequency domain data (double-sided)
+aX_fft = fft(aX);
+aX_double= abs(aX_fft/arr_size);
+% Generate frequency domain data (single-sided)
+aX_single = aX_double(1:arr_size/2+1);
+aX_single(2:end-1) = 2*aX_single(2:end-1);
+plot(f, abs(aX_single));
 title('X-Axis One-sided Amplitude Spectrum');
+xlabel('f (Hz)');
+ylabel('|P1(f)|');
 
 ##% Generate frequency domain data (double-sided)
 ##Y_double = fft(aY, fft_size);
@@ -77,21 +84,21 @@ title('X-Axis One-sided Amplitude Spectrum');
 ##plot(f, abs(Z_single));
 ##title('Z-Axis One-sided Amplitude Spectrum');
 
-% Low pass filter the data
-fpass = 0.75;
-n = 6;
-[b,a] = butter(n,fpass/(fs/2));
+% Low pass filter the data. Cutoff = 1Hz, 2nd order filter
+fpass = 1;
+n = 2;
+[b,a] = butter(n,fpass/(fs/2),'low');
 aX_lpf = filter(b,a,aX);
 
 figure();
-X_double_lpf = fft(aX_lpf, fft_size);
-% Generate singler-sided frequency data 
-X_single_lpf = X_double_lpf(1:fft_size/2) * 2;
-% Convert frequency bins to actual frequency values (Hz)       
-f = fs*(0:fft_size/2 - 1)/fft_size;
-plot(f, abs(X_single_lpf));
+aX_lpf_fft = fft(aX_lpf);
+aX_double_lpf= abs(aX_lpf_fft/arr_size);
+aX_single_lpf = aX_double_lpf(1:arr_size/2+1);
+aX_single_lpf(2:end-1) = 2*aX_single_lpf(2:end-1);
+plot(f, abs(aX_single_lpf));
 title('X-Axis One-sided Amplitude Spectrum (after LPF)');
-
+xlabel('f (Hz)');
+ylabel('|P1(f)|');
 
 figure();
 plot(time_ms, aX);
@@ -103,6 +110,8 @@ plot(time_ms, aX_lpf);
 title('X-Axis acceleration (low-pass filterted) vs time');
 hold;
 plot(time_ms, aX_avg_arr);
+
+
 
 
 
