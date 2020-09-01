@@ -6,13 +6,13 @@
 pkg load signal
 close all;
 
-aX = importdata('x_accel_0.8667hz.txt');
+aX = importdata('../Reliable datasets/x_accel_single_1-9-2020.txt');
 aX_negated = aX .* -1;
-aY = importdata('y_accel.txt');
+aY = importdata('../Reliable datasets/y_accel.txt');
 aY_negated = aY .* -1;
-aZ = importdata('z_accel.txt');
+aZ = importdata('../Reliable datasets/z_accel.txt');
 aZ_negated = aZ .* -1;
-time_ms = importdata('time_ms_0.8667hz.txt');
+time_ms = importdata('../Reliable datasets/time_ms_single_1-9-2020.txt');
 
 ##all_axes_sum =  aX + aY + aZ;
 arr_size = length(aX);
@@ -25,22 +25,30 @@ for i = 1:arr_size
   aY_sum = aY_sum + aY(i);
   aZ_sum = aZ_sum + aZ(i);
 end
+
 aX_avg = aX_sum / arr_size;
 aX_avg_arr = aX_avg.* ones(arr_size,1);
 aY_avg = aY_sum / arr_size;
 aY_avg_arr = aY_avg.* ones(arr_size,1);
 aZ_avg = aZ_sum / arr_size;
 aZ_avg_arr = aZ_avg.* ones(arr_size,1);
- 
+
+##% Set anything below avg equal to avg
+##for i = 1:arr_size
+##  if (aX(i) < aX_avg)
+##    aX(i) = aX_avg;
+##  endif
+##end
+
 x_points = linspace(0, arr_size - 1, arr_size);
 
 %-------------------------------------------------------------------------------
 % Compute and plot FFT of acceleration data
 % Setup Variables:
-% Accelerometer sampling frequency = 8 but Fs = 16 seems to produce a spectral
+% Accelerometer sampling frequency = 8Hz but Fs = 16Hz seems to produce a spectral
 % plot that seems to look like what it expected - need to investiagte this (?)
 
-fs = 16; % sampling frequency
+fs = 2; % sampling frequency
 f = fs*(0:(arr_size/2))/arr_size;
 % Number of frequency pins must be power of two... 41633 -> 65536
 fft_size=2^nextpow2(arr_size);

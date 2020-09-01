@@ -4,9 +4,12 @@ import math
 import matplotlib.pyplot as plt
 import numpy as np
 import os
+from pathlib import Path
+
+Path(__file__).parents[1]
 
 cwd = os.getcwd()
-input_file_path = cwd + '\\..\\Reliable datasets\\GOOD_DATALOG_29-8-2020_MODIFIED.txt'
+input_file_path = str(Path(__file__).parents[1]) + '\Reliable datasets\DATALOG2.txt'
 
 class datalog:
     def __init__(self):
