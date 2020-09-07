@@ -1,5 +1,6 @@
 /* 2020 Patrick Corley - patrick.urban90@gmail.com
    CaptuRow Rowing speed monitor
+   Migrated from Arduino Uno to Arduino MEGA 2560 on 7/9/2020
 
 */
 
@@ -13,9 +14,9 @@
 #include "SdFat.h"
 #include "TimerOne.h"
 
-#define GPS_RX_PIN 8
-#define GPS_TX_PIN 9
-#define CS 10
+#define GPS_RX_PIN 69
+#define GPS_TX_PIN 68
+#define CS 53
 #define GPS_BAUD 9600
 #define COM_PORT_BAUD 115200
 #define DISTANCE_INTERVAL 5
@@ -32,13 +33,12 @@ SdFat sd;
 SdFile sd_file;
 SoftwareSerial ss(GPS_TX_PIN, GPS_RX_PIN);
 
-
 double elap_mins = 0.00;
 double elap_secs = 0.00;
 
 double split_mins = 0.00;
 double split_secs = 0.00;
-char current_gps_speed[7];
+
 double distance = 0.00;
 double temp_distance = 0;
 double distance_delta = 0;
@@ -46,23 +46,20 @@ long strk_counter = 0;
 
 long log_line_cnt = 0;
 
-char initial_lat[11];
-char initial_long[12];
-char current_lat[11];
-char current_long[12];
-
-char aX[8];
-char aY[8];
-char aZ[8];
-//double aX = 0 ;
-//double aY = 0;
-//double aZ = 0;
+double initial_lat = 0;
+double initial_long = 0;
+char current_lat[13] = "";
+char current_long[13] = "";
+char current_gps_speed[10] = "";
+char aX[10]= "";
+char aY[10] = "";
+char aZ[10] = "";
 
 bool DEBUG_EN = false;
 bool CAP_STARTED = false;
 bool FIRST_CAP = true;
 
-char SD_BUF[70];
+char SD_BUF[256];
 
 String log_file_name = "DATALOG.txt";
 
@@ -87,9 +84,8 @@ void setup() {
   // Init Variables
   strk_counter = 0;
   // Get intial location
-  dtostrf(gps.location.lat(), 10, 6, initial_lat);
-  dtostrf(gps.location.lng(), 11, 6, initial_long);
-
+  initial_lat = gps.location.lat();
+  initial_long = gps.location.lng();
 }
 
 void loop() {
@@ -98,10 +94,7 @@ void loop() {
   // Read software serial port and encode gps data
   process_distance();
   convert_speed();
-//  Serial.println("I have just updated the accelerometer data!");
-//  Serial.print(millis());
-//  Serial.print("\n");
-    if (DEBUG_EN) {
+  if (DEBUG_EN) {
     Serial.print("Speed Mins: ");
     Serial.print(String(split_mins));
     Serial.print(" Mins");
@@ -109,7 +102,6 @@ void loop() {
     Serial.print(String(split_secs));
     Serial.println(" Secs");
   }
-
   convert_time(&elap_mins, &elap_secs);
   update_disp(distance, strk_counter, &elap_mins, &elap_secs);
   // Update GPS 
@@ -117,7 +109,7 @@ void loop() {
     gps.encode(ss.read());
     // Check if speed has been updated
     if (gps.speed.isUpdated()) {
-      dtostrf(gps.speed.mps(), 6, 2, current_gps_speed);
+      dtostrf(gps.speed.mps(), 8, 4, current_gps_speed);
     }
   }
   // Check status of SD capture switch
@@ -147,8 +139,8 @@ void loop() {
   // Read accel
   if (accel.available()) {
       dtostrf(accel.getCalculatedX(), 7, 4, aX);
-      dtostrf(accel.getCalculatedX(), 7, 4, aY);
-      dtostrf(accel.getCalculatedX(), 7, 4, aZ);
+      dtostrf(accel.getCalculatedY(), 7, 4, aY);
+      dtostrf(accel.getCalculatedZ(), 7, 4, aZ);
   }
 }
 
@@ -156,89 +148,8 @@ void write_to_sd() {
   
   if ((digitalRead(START_CAPTURE_PIN) == HIGH) and (FIRST_CAP == false)){
     // Add in SD buffer and organize variables so everyhting can be written in one SD Write..
-    //sprintf(SD_BUF, "Time(mS): %d\tLog #: %d\tLatitude: %f\tLongitude: %f\tX-Acceleration: %f\tGPS Speed (KM/H): %f\n", log_time, log_line_cnt, current_lat, current_long, aX, current_gps_speed);
-    sprintf(SD_BUF, "Time(mS): %lu\tX-Acceleration: %s\tY-Acceleration: %s\tZ-Acceleration: %s\n", millis(), aX, aY, aZ);
+    sprintf(SD_BUF, "Time(mS): %lu\tLog #: %lu\tLatitude: %s\tLongitude: %s\tX-Acceleration: %s\tY-Acceleration: %s\tZ-Acceleration: %s\tGPS Speed (KM/H): %s\n", millis(), log_line_cnt, current_lat, current_long, aX, aY, aZ, current_gps_speed);
     sd_file.print(SD_BUF);
-    //sd_file.print(SD_BUF);
-//    sd_file.print("Time(mS): ") ;
-//    sd_file.print(log_time);
-//    sd_file.print("\t");
-//  
-//    sd_file.print("Log #: ") ;
-//    sd_file.print(log_line_cnt);
-//    sd_file.print("\t");
-//  
-//    sd_file.print("Latitude: ");
-//    sd_file.print(current_lat, 8);
-//    sd_file.print("\t");
-//  
-//    sd_file.print("Longitude: ");
-//    sd_file.print(current_long, 8);
-//    sd_file.print("\t");
-//  
-//    sd_file.print("Number of Strokes: ");
-//    sd_file.print(strk_counter);
-//    sd_file.print("\t");
-//  
-//    sd_file.print("X-Acceleration: ");
-//    sd_file.print(aX, 4);
-//    sd_file.print("\t");
-//  
-//    sd_file.print("Y-Acceleration: ");
-//    sd_file.print(aY, 4);
-//    sd_file.print("\t");
-//  
-//    sd_file.print("Z-Acceleration: ");
-//    sd_file.print(aZ, 4);
-//    sd_file.print("\t");
-  
-//    sd_file.print("Distance Travelled: ");
-//    sd_file.print(distance, 4);
-//    sd_file.print("\t");
-//  
-//    sd_file.print("Split: ");
-//    sd_file.print(split_mins, 0);
-//    sd_file.print(":");
-//    sd_file.print(split_secs);
-//    sd_file.print("\t");
-  
-//    sd_file.print("GPS Speed (KM/H): ");
-//    sd_file.print(current_gps_speed);
-//    sd_file.print("\n");
-  
-  //  Serial.print("Log #: ") ;
-  //  Serial.print(log_line_cnt);
-  //  Serial.print("\t");
-  //  Serial.print("Latitude: ");
-  //  Serial.print(current_lat, 8);
-  //  Serial.print("\t");
-  //  Serial.print("Longitude: ");
-  //  Serial.print(current_long, 8);
-  //  Serial.print("\t");
-  //  Serial.print("Number of Strokes: ");
-  //  Serial.print(strk_counter);
-  //  Serial.print("\t");
-  //  Serial.print("X-Acceleration: ");
-  //  Serial.print(aX, 4);
-  //  Serial.print("\t");
-  //  Serial.print("Y-Acceleration: ");
-  //  Serial.print(aY, 4);
-  //  Serial.print("\t");
-  //  Serial.print("Z-Acceleration: ");
-  //  Serial.print(aZ, 4);
-  //  Serial.print("\n");
-  //  Serial.print("\t");
-  //  Serial.print("Distance Travelled: ");
-  //  Serial.print(distance, 4);
-  //  Serial.print("\t");
-  //  Serial.print("Split: ");
-  //  Serial.print(split_mins, 0);
-  //  Serial.print(":");
-  //  Serial.print(split_secs);
-  //  Serial.print("GPS Speed (KM/H): ");
-  //  Serial.print(current_gps_speed);
-  //  Serial.print("\n");
-  //
     log_line_cnt++;
   }else{
     FIRST_CAP = false;
@@ -246,28 +157,30 @@ void write_to_sd() {
 }
 
 void process_distance() {
+  double local_lat = gps.location.lat();
+  double local_long = gps.location.lng();
   temp_distance = 0;
   distance_delta = 0;
-  dtostrf(gps.location.lat(), 10, 6, current_lat);
-  dtostrf(gps.location.lng(), 11, 6, current_long);
-//  temp_distance = gps.distanceBetween(initial_lat, initial_long, current_lat, current_long);
+  dtostrf(local_lat, 10, 6, current_lat);
+  dtostrf(local_long, 11, 6, current_long);
+  temp_distance = gps.distanceBetween(initial_lat, initial_long, local_lat, local_long);
   distance_delta = temp_distance - distance;
   if ((1000 > distance_delta) and (distance_delta > DISTANCE_INTERVAL)) {
     distance += distance_delta;
   }
   if (DEBUG_EN) {
-//    Serial.println("Initial Latitude = ");
-//    Serial.println(initial_lat, 6);
-//    Serial.println("Initial Longitude = ");
-//    Serial.println(initial_long, 6);
-//    Serial.println("Current Latitude = ");
-//    Serial.println(current_lat, 6);
-//    Serial.println("Current Longitude = ");
-//    Serial.println(current_long, 6);
-//    Serial.println("Current Distance from start point = ");
-//    Serial.println(temp_distance);
-//    Serial.println("Greatest distance from start point = ");
-//    Serial.println(distance);
+    Serial.println("Initial Latitude = ");
+    Serial.println(initial_lat, 6);
+    Serial.println("Initial Longitude = ");
+    Serial.println(initial_long, 6);
+    Serial.println("Current Latitude = ");
+    Serial.println(current_lat);
+    Serial.println("Current Longitude = ");
+    Serial.println(current_long);
+    Serial.println("Current Distance from start point = ");
+    Serial.println(temp_distance);
+    Serial.println("Greatest distance from start point = ");
+    Serial.println(distance);
   }
 }
 
@@ -289,8 +202,7 @@ void convert_speed() {
   double converted_speed = 0;
   double seconds_factor;
 
-  //read_speed = atof(current_gps_speed);
-  read_speed = 1.1;
+  read_speed = atof(current_gps_speed);
   result_factor = 500 / read_speed ;
   converted_speed = result_factor / 60.0000;
   seconds_factor = modf (converted_speed, &split_mins);
@@ -349,7 +261,8 @@ static void gps_smartdelay(unsigned long ms) {
         dtostrf(gps.speed.mps(), 6, 2, current_gps_speed);
         if (DEBUG_EN) {
           Serial.print("Current Speed = ");
-          Serial.print(current_gps_speed);
+          //Serial.print(current_gps_speed);
+          Serial.print('0.00');
           Serial.println();
         }
       }

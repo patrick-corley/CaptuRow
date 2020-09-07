@@ -6,13 +6,13 @@
 pkg load signal
 close all;
 
-aX = importdata('../Reliable datasets/x_accel_single_1-9-2020.txt');
+aX = importdata('../Reliable datasets/x_accel_0.5hz.txt');
 aX_negated = aX .* -1;
 aY = importdata('../Reliable datasets/y_accel.txt');
 aY_negated = aY .* -1;
 aZ = importdata('../Reliable datasets/z_accel.txt');
 aZ_negated = aZ .* -1;
-time_ms = importdata('../Reliable datasets/time_ms_single_1-9-2020.txt');
+time_ms = importdata('../Reliable datasets/sample_num_0.5hz.txt');
 
 ##all_axes_sum =  aX + aY + aZ;
 arr_size = length(aX);
