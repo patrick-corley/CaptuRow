@@ -13,7 +13,9 @@
 #include <SPI.h>
 #include "SdFat.h"
 #include "TimerOne.h"
+#include "arduinoFFT.h"
 
+// Create Preprocessor defines...
 #define GPS_RX_PIN 69
 #define GPS_TX_PIN 68
 #define CS 53
@@ -22,17 +24,23 @@
 #define DISTANCE_INTERVAL 5
 #define STRK_ACCEL_THRES 0.5
 #define START_CAPTURE_PIN 7
-#define ACCEL_SAMPLE_RATE_uS 505000
+#define ACCEL_SAMPLE_RATE_uS 100000
 #define ELAPSED_TIME 1000
 #define LOG_FILE_NAME "DATALOG.txt"
 
+#define ACCEL_SAMPLE_NUM 32
+#define ACCEL_SAMPLE_FREQ 10
+
+// Create program objects...
 rgb_lcd lcd;
 TinyGPSPlus gps;
 MMA8452Q accel;
 SdFat sd;
 SdFile sd_file;
 SoftwareSerial ss(GPS_TX_PIN, GPS_RX_PIN);
+arduinoFFT fft = arduinoFFT(); 
 
+// Create program variables...
 double elap_mins = 0.00;
 double elap_secs = 0.00;
 
@@ -48,6 +56,12 @@ long log_line_cnt = 0;
 
 double initial_lat = 0;
 double initial_long = 0;
+
+double aX_samples[ACCEL_SAMPLE_NUM];
+double aY_samples[ACCEL_SAMPLE_NUM];
+double aZ_samples[ACCEL_SAMPLE_NUM];
+long sample_idx = 0;
+
 char current_lat[13] = "";
 char current_long[13] = "";
 char current_gps_speed[10] = "";
@@ -58,11 +72,13 @@ char aZ[10] = "";
 bool DEBUG_EN = false;
 bool CAP_STARTED = false;
 bool FIRST_CAP = true;
+bool CALC_FFT_FLAG = false;
 
 char SD_BUF[256];
 
 String log_file_name = "DATALOG.txt";
 
+// Define functions
 void setup() {
   // put your setup code here, to run once:
   // set up the LCD's number of columns and rows:
@@ -142,12 +158,24 @@ void loop() {
       dtostrf(accel.getCalculatedY(), 7, 4, aY);
       dtostrf(accel.getCalculatedZ(), 7, 4, aZ);
   }
+  if (CALC_FFT_FLAG){
+    calc_major_peak();
+  }
 }
 
 void write_to_sd() {
-  
   if ((digitalRead(START_CAPTURE_PIN) == HIGH) and (FIRST_CAP == false)){
     // Add in SD buffer and organize variables so everyhting can be written in one SD Write..
+    aX_samples[sample_idx] =  atof(aX);
+    Serial.println(aX_samples[sample_idx], 6);
+    aY_samples[sample_idx] =  atof(aY);
+    aZ_samples[sample_idx] =  atof(aZ);
+    if (sample_idx == ACCEL_SAMPLE_NUM - 1){
+      sample_idx = 0;
+      CALC_FFT_FLAG = true;
+    }else{
+      sample_idx++;
+    }
     sprintf(SD_BUF, "Time(mS): %lu\tLog #: %lu\tLatitude: %s\tLongitude: %s\tX-Acceleration: %s\tY-Acceleration: %s\tZ-Acceleration: %s\tGPS Speed (KM/H): %s\n", millis(), log_line_cnt, current_lat, current_long, aX, aY, aZ, current_gps_speed);
     sd_file.print(SD_BUF);
     log_line_cnt++;
@@ -155,6 +183,15 @@ void write_to_sd() {
     FIRST_CAP = false;
   }
 }
+
+void calc_major_peak(void){
+  // Function to calculate FFT of accelerometer samples
+  double peak;
+  peak = fft.MajorPeak(aX_samples, ACCEL_SAMPLE_NUM, ACCEL_SAMPLE_FREQ);
+  Serial.println(peak);
+  CALC_FFT_FLAG = false;
+}
+
 
 void process_distance() {
   double local_lat = gps.location.lat();
