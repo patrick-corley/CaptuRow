@@ -4,7 +4,7 @@ Hardware and software platform for capturing and analyzing rowing performance da
 Folder Structure:  
 
 <b>Arduino</b>:
-  - Firmware for data capture hardware (Atmega 328P + MMA8452 Accelerometer + Neo 6M GPS module + micro-SD card module)
+  - Firmware for data capture hardware (~~Atmega 328P~~ Atmega 2560 + MMA8452 Accelerometer + Neo 6M GPS module + micro-SD card module)
 
 <b>Python:</b>
   - Scripts for post-processing captured rowing data (acceleration on all axes, distance, speed, etc.)
