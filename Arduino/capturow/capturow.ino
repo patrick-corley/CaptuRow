@@ -24,12 +24,19 @@
 #define DISTANCE_INTERVAL 5
 #define STRK_ACCEL_THRES 0.5
 #define START_CAPTURE_PIN 7
-#define ACCEL_SAMPLE_RATE_uS 100000
 #define ELAPSED_TIME 1000
 #define LOG_FILE_NAME "DATALOG.txt"
 
-#define ACCEL_SAMPLE_NUM 32
-#define ACCEL_SAMPLE_FREQ 10
+#define ACCEL_SAMPLE_NUM 64
+#define ACCEL_SAMPLE_FREQ 1.33
+#define ACCEL_SAMPLE_RATE_uS 1000000 / ACCEL_SAMPLE_FREQ
+
+#define LCD_UPDATE_PERIOD_mS 1000
+
+#define SCL_INDEX 0x00
+#define SCL_TIME 0x01
+#define SCL_FREQUENCY 0x02
+#define SCL_PLOT 0x03
 
 // Create program objects...
 rgb_lcd lcd;
@@ -50,12 +57,16 @@ double split_secs = 0.00;
 double distance = 0.00;
 double temp_distance = 0;
 double distance_delta = 0;
+
+int stroke_rate = 0;
 long strk_counter = 0;
 
 long log_line_cnt = 0;
 
 double initial_lat = 0;
 double initial_long = 0;
+
+long last_lcd_update = 0;
 
 double aX_samples[ACCEL_SAMPLE_NUM];
 double aY_samples[ACCEL_SAMPLE_NUM];
@@ -96,12 +107,18 @@ void setup() {
     delay(500);
   }
   Serial.println("card initialized.");
-
+  delay(2000);
   // Init Variables
   strk_counter = 0;
-  // Get intial location
-  initial_lat = gps.location.lat();
-  initial_long = gps.location.lng();
+  // Get initial location
+  while(ss.available()) {
+    gps.encode(ss.read());
+    // Check if speed has been updated
+    if (gps.location.isUpdated()) {
+      initial_lat = gps.location.lat();
+      initial_long = gps.location.lng();
+    }
+  }
 }
 
 void loop() {
@@ -119,7 +136,11 @@ void loop() {
     Serial.println(" Secs");
   }
   convert_time(&elap_mins, &elap_secs);
-  update_disp(distance, strk_counter, &elap_mins, &elap_secs);
+  // Update LCD
+  if ((millis() - last_lcd_update) >= LCD_UPDATE_PERIOD_mS){
+    last_lcd_update = millis();
+    update_disp(distance, &elap_mins, &elap_secs);
+  }
   // Update GPS 
   while(ss.available()) {
     gps.encode(ss.read());
@@ -187,11 +208,18 @@ void write_to_sd() {
 void calc_major_peak(void){
   // Function to calculate FFT of accelerometer samples
   double peak;
+  double imag_arr[ACCEL_SAMPLE_NUM];
+  // Build up imaginary data (zeros)
+  for (int i = 0; i < ACCEL_SAMPLE_NUM; i++){
+    imag_arr[i] = 0.0;
+  }
+  fft.Windowing(aX_samples, ACCEL_SAMPLE_NUM, FFT_WIN_TYP_HAMMING, FFT_FORWARD);
+  fft.Compute(aX_samples, imag_arr, ACCEL_SAMPLE_NUM, FFT_FORWARD);
+  fft.ComplexToMagnitude(aX_samples, imag_arr, ACCEL_SAMPLE_NUM);
   peak = fft.MajorPeak(aX_samples, ACCEL_SAMPLE_NUM, ACCEL_SAMPLE_FREQ);
-  //Serial.println(peak);
+  stroke_rate = (peak * 60) + 0.5;
   CALC_FFT_FLAG = false;
 }
-
 
 void process_distance() {
   double local_lat = gps.location.lat();
@@ -246,8 +274,7 @@ void convert_speed() {
   split_secs = seconds_factor * 60.0000;
 
 }
-void update_disp(double distance, long stroke_rate, double* mins, double* secs) {
-  lcd.clear();
+void update_disp(double distance, double* mins, double* secs) {
   // Print a message to the first line of LCD.
   lcd.setCursor(0, 0);
   //lcd.print("Split - ");
@@ -305,4 +332,31 @@ static void gps_smartdelay(unsigned long ms) {
       }
     }
   } while (millis() - start < ms);
+}
+
+void PrintVector(double *vData, uint16_t bufferSize, uint8_t scaleType)
+{
+  for (uint16_t i = 0; i < bufferSize; i++)
+  {
+    double abscissa;
+    /* Print abscissa value */
+    switch (scaleType)
+    {
+      case SCL_INDEX:
+        abscissa = (i * 1.0);
+  break;
+      case SCL_TIME:
+        abscissa = ((i * 1.0) / ACCEL_SAMPLE_FREQ);
+  break;
+      case SCL_FREQUENCY:
+        abscissa = ((i * 1.0 * ACCEL_SAMPLE_FREQ) / ACCEL_SAMPLE_NUM);
+  break;
+    }
+    Serial.print(abscissa, 6);
+    if(scaleType==SCL_FREQUENCY)
+      Serial.print("Hz");
+    Serial.print(" ");
+    Serial.println(vData[i], 4);
+  }
+  Serial.println();
 }

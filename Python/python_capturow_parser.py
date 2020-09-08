@@ -145,10 +145,6 @@ def avg_accel_data():
     dlog.aY_avg = y_sum / dlog.num_samples
     dlog.aZ_avg = z_sum / dlog.num_samples
 
-def accel_fft(calc_x= True, calc_y = False, calc_z = False):
-    # add fft code here
-    print("")
-
 if __name__ == '__main__':
     read_file = False
     if read_file:
@@ -179,7 +175,12 @@ if __name__ == '__main__':
     else:
         # Read from Serial Port
         dlog = datalog()
-        num_fft_samples = 10
+        aX_fft_idx = 0
+        num_fft_samples = 40
+        sample_freq = 1.33
+        sample_period = 1 / sample_freq
+        aX_fft_arr = [0] * num_fft_samples
+        plt.figure()
         with serial.Serial(port='COM4',baudrate=115200) as ser:
             while(1):
                 ser_line = ser.readline()
@@ -190,11 +191,30 @@ if __name__ == '__main__':
                     if len(ser_list) > 1:
                         x_accel = ser_list[4].split(" ")[-1]
                         sample = ser_list[1].split(" ")[-1]
-                        dlog.aX.append(x_accel)
                         dlog.current_sample = sample
-                if (int(dlog.current_sample) % (num_fft_samples - 1) == 0):
-                    # Run FFT
-                    print("HERE")
+                        dlog.aX.append(x_accel)
+                        aX_fft_arr[aX_fft_idx] = x_accel
+                        if aX_fft_idx == num_fft_samples - 1:
+                            # Run FFT
+                            # Calc Double-sided power spectrum
+                            aX_fft_mag = abs(np.fft.fft(aX_fft_arr))
+                            aX_fft_freq = np.fft.fftfreq(n=num_fft_samples, d=sample_period)
+                            # Clear previous plot 
+                            plt.clf()
+                            plt.scatter(aX_fft_freq, aX_fft_mag)
+                            # Label points for easy identification of spectral content
+                            for i, freq in enumerate(aX_fft_freq):
+                                if freq >= -1.5 and freq <= 1.5:
+                                    plt.annotate(freq, (freq, aX_fft_mag[i]))
+                            plt.ylim([0, 10])
+                            plt.title("Double-sided power spectrum for X-axis")
+                            plt.xlabel("Frequency (Hz)")
+                            plt.ylabel("Magnitude |aX|")
+                            plt.pause(0.05)
+                            plt.show(block=False)
+                            aX_fft_idx = 0
+                        else:
+                            aX_fft_idx += 1
 
         
                 
