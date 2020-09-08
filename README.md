@@ -14,3 +14,13 @@ Folder Structure:
   
 <b>Reliable Datasets:</b>
   - Contains good data from rowing sessions. Used as reference for development.
+  
+ <b>Third-party Libraries Used:</b>
+ 
+    Arduino:
+     - https://github.com/kosme/arduinoFFT
+     - https://github.com/mikalhart/TinyGPSPlus
+     - https://github.com/greiman/SdFat
+     - https://github.com/PaulStoffregen/TimerOne
+     - https://github.com/sparkfun/SparkFun_MMA8452Q_Arduino_Library
+     - https://github.com/Seeed-Studio/Grove_LCD_RGB_Backlight
