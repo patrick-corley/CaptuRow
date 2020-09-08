@@ -5,13 +5,13 @@
 */
 
 #include <Wire.h>
-#include "rgb_lcd.h"
 #include <SoftwareSerial.h>
-#include <TinyGPS++.h>
 #include <math.h>
-#include "SparkFun_MMA8452Q.h"
 #include <SPI.h>
+#include "TinyGPS++.h"
+#include "SparkFun_MMA8452Q.h"
 #include "SdFat.h"
+#include "rgb_lcd.h"
 #include "TimerOne.h"
 #include "arduinoFFT.h"
 
