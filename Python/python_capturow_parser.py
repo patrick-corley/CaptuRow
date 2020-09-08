@@ -4,12 +4,15 @@ import math
 import matplotlib.pyplot as plt
 import numpy as np
 import os
+import sys
+import time
+import serial
 from pathlib import Path
 
 Path(__file__).parents[1]
 
 cwd = os.getcwd()
-input_file_path = str(Path(__file__).parents[1]) + '\Reliable datasets\DATALOG2.txt'
+input_file_path = str(Path(__file__).parents[1]) + '\Reliable datasets\GOOD_DATALOG_29-8-2020_MODIFIED.txt'
 
 class datalog:
     def __init__(self):
@@ -100,7 +103,7 @@ def plot_accel(plot_all_axes_sum = False, round_precision = 2, x_axis_step = 20,
         plt.plot(x_points, sum_rounded)
         plt.title('X-Axis + Y-Axis + Z-Axis Acceleration')
         plt.xlabel('Sample')
-        plt.ylabel('Acceleration (1G normalized)')
+        plt.ylabel('Acceleration (2G normalized)')
         plt.show()
 
     else:
@@ -110,7 +113,7 @@ def plot_accel(plot_all_axes_sum = False, round_precision = 2, x_axis_step = 20,
             plt.plot(x_points, np.full(end_point - start_point, dlog.aX_avg))
         plt.title('X-Axis Acceleration')
         plt.xlabel('Sample')
-        plt.ylabel('Acceleration (1G normalized)')
+        plt.ylabel('Acceleration (2G normalized)')
         plt.xticks(np.arange(start_point, end_point, step=x_axis_step))
         plt.subplot(3,1,2)
         plt.plot(x_points, aY_rounded)
@@ -118,7 +121,7 @@ def plot_accel(plot_all_axes_sum = False, round_precision = 2, x_axis_step = 20,
             plt.plot(x_points, np.full(end_point - start_point, dlog.aY_avg))
         plt.title('Y-Axis Acceleration')
         plt.xlabel('Sample')
-        plt.ylabel('Acceleration (1G normalized)')
+        plt.ylabel('Acceleration (2G normalized)')
         plt.xticks(np.arange(start_point, end_point, step=x_axis_step))
         plt.subplot(3,1,3)
         plt.plot(x_points, aZ_rounded)
@@ -126,7 +129,7 @@ def plot_accel(plot_all_axes_sum = False, round_precision = 2, x_axis_step = 20,
             plt.plot(x_points, np.full(end_point - start_point, dlog.aZ_avg))
         plt.title('Z-Axis Acceleration')
         plt.xlabel('Sample')
-        plt.ylabel('Acceleration (1G normalized)')
+        plt.ylabel('Acceleration (2G normalized)')
         plt.xticks(np.arange(start_point, end_point, step=x_axis_step))
         plt.show()
 
@@ -142,33 +145,56 @@ def avg_accel_data():
     dlog.aY_avg = y_sum / dlog.num_samples
     dlog.aZ_avg = z_sum / dlog.num_samples
 
-       
+def accel_fft(calc_x= True, calc_y = False, calc_z = False):
+    # add fft code here
+    print("")
+
 if __name__ == '__main__':
-    # Create datalog object
-    dlog = datalog()
-    with open(input_file_path, "r") as f:
-        line = f.readline()
-        while line:
-            line_list  = line.split('\t')
-            dlog.elap_milli.append(int(line_list[0].split(' ')[-1]))
-            dlog.current_sample = line_list[1].split(' ')[-1]
-            dlog.latitude.append(line_list[2].split(' ')[-1])
-            dlog.longitude.append(line_list[3].split(' ')[-1])
-            dlog.num_strokes = line_list[4].split(' ')[-1]
-            dlog.aX.append(line_list[5].split(' ')[-1])
-            dlog.aY.append(line_list[6].split(' ')[-1])
-            dlog.aZ.append(line_list[7].split(' ')[-1])
-            # Read next line
+    read_file = False
+    if read_file:
+        # Create datalog object
+        dlog = datalog()
+        with open(input_file_path, "r") as f:
             line = f.readline()
-    # set current sample back to zero
-    dlog.current_sample = 0
-    count_samples()
-    avg_accel_data()
-    plot_coords(sample_interval=500)
-    calc_total_distance()
-    calc_max_speed(sample_interval=2500)
-    plot_accel(plot_all_axes_sum=False, round_precision=6, x_axis_step=5, plot_avg=True, start_point=6500, end_point=7000)
+            while line:
+                line_list  = line.split('\t')
+                dlog.elap_milli.append(int(line_list[0].split(' ')[-1]))
+                dlog.current_sample = line_list[1].split(' ')[-1]
+                dlog.latitude.append(line_list[2].split(' ')[-1])
+                dlog.longitude.append(line_list[3].split(' ')[-1])
+                dlog.num_strokes = line_list[4].split(' ')[-1]
+                dlog.aX.append(line_list[5].split(' ')[-1])
+                dlog.aY.append(line_list[6].split(' ')[-1])
+                dlog.aZ.append(line_list[7].split(' ')[-1])
+                # Read next line
+                line = f.readline()
+        # set current sample back to zero
+        dlog.current_sample = 0
+        count_samples()
+        avg_accel_data()
+        plot_coords(sample_interval=500)
+        calc_total_distance()
+        calc_max_speed(sample_interval=2500)
+        plot_accel(plot_all_axes_sum=False, round_precision=6, x_axis_step=5, plot_avg=True, start_point=6500, end_point=7000)
+    else:
+        # Read from Serial Port
+        dlog = datalog()
+        num_fft_samples = 10
+        with serial.Serial(port='COM4',baudrate=115200) as ser:
+            while(1):
+                ser_line = ser.readline()
+                if ser_line:
+                    ser_str = ser_line.decode('ascii')
+                    print(ser_str)
+                    ser_list = ser_str.split("\t")
+                    if len(ser_list) > 1:
+                        x_accel = ser_list[4].split(" ")[-1]
+                        sample = ser_list[1].split(" ")[-1]
+                        dlog.aX.append(x_accel)
+                        dlog.current_sample = sample
+                if (int(dlog.current_sample) % (num_fft_samples - 1) == 0):
+                    # Run FFT
+                    print("HERE")
 
-
-
-
+        
+                

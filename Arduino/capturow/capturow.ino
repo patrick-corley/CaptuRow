@@ -154,9 +154,9 @@ void loop() {
   }
   // Read accel
   if (accel.available()) {
-      dtostrf(accel.getCalculatedX(), 7, 4, aX);
-      dtostrf(accel.getCalculatedY(), 7, 4, aY);
-      dtostrf(accel.getCalculatedZ(), 7, 4, aZ);
+      dtostrf(accel.getCalculatedX(), 9, 6, aX);
+      dtostrf(accel.getCalculatedY(), 9, 6, aY);
+      dtostrf(accel.getCalculatedZ(), 9, 6, aZ);
   }
   if (CALC_FFT_FLAG){
     calc_major_peak();
@@ -167,7 +167,6 @@ void write_to_sd() {
   if ((digitalRead(START_CAPTURE_PIN) == HIGH) and (FIRST_CAP == false)){
     // Add in SD buffer and organize variables so everyhting can be written in one SD Write..
     aX_samples[sample_idx] =  atof(aX);
-    Serial.println(aX_samples[sample_idx], 6);
     aY_samples[sample_idx] =  atof(aY);
     aZ_samples[sample_idx] =  atof(aZ);
     if (sample_idx == ACCEL_SAMPLE_NUM - 1){
@@ -178,6 +177,7 @@ void write_to_sd() {
     }
     sprintf(SD_BUF, "Time(mS): %lu\tLog #: %lu\tLatitude: %s\tLongitude: %s\tX-Acceleration: %s\tY-Acceleration: %s\tZ-Acceleration: %s\tGPS Speed (KM/H): %s\n", millis(), log_line_cnt, current_lat, current_long, aX, aY, aZ, current_gps_speed);
     sd_file.print(SD_BUF);
+    Serial.print(SD_BUF);
     log_line_cnt++;
   }else{
     FIRST_CAP = false;
@@ -188,7 +188,7 @@ void calc_major_peak(void){
   // Function to calculate FFT of accelerometer samples
   double peak;
   peak = fft.MajorPeak(aX_samples, ACCEL_SAMPLE_NUM, ACCEL_SAMPLE_FREQ);
-  Serial.println(peak);
+  //Serial.println(peak);
   CALC_FFT_FLAG = false;
 }
 
