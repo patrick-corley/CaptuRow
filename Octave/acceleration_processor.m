@@ -115,7 +115,7 @@ hold;
 plot(time_ms, aX_avg_arr);
 figure();
 plot(time_ms, aX_lpf);
-title('X-Axis acceleration (low-pass filterted) vs time');
+title('X-Axis acceleration (low-pass filtered) vs time');
 hold;
 plot(time_ms, aX_avg_arr);
 
