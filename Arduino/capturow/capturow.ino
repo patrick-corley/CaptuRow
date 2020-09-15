@@ -14,6 +14,7 @@
 #include "rgb_lcd.h"
 #include "TimerOne.h"
 #include "arduinoFFT.h"
+#include "fir_filter.h"
 
 // Create Preprocessor defines...
 #define GPS_RX_PIN 69
@@ -22,13 +23,16 @@
 #define GPS_BAUD 9600
 #define COM_PORT_BAUD 115200
 #define DISTANCE_INTERVAL 5
-#define STRK_ACCEL_THRES 0.5
+
+#define STRK_ACCEL_THRES 0.2
+#define STRK_DETECT_INTERVAL_mS 750
+
 #define START_CAPTURE_PIN 7
 #define ELAPSED_TIME 1000
 #define LOG_FILE_NAME "DATALOG.txt"
 
-#define ACCEL_SAMPLE_NUM 64
-#define ACCEL_SAMPLE_FREQ 1.33
+#define ACCEL_SAMPLE_NUM 75
+#define ACCEL_SAMPLE_FREQ 15
 #define ACCEL_SAMPLE_RATE_uS 1000000 / ACCEL_SAMPLE_FREQ
 
 #define LCD_UPDATE_PERIOD_mS 1000
@@ -46,6 +50,7 @@ SdFat sd;
 SdFile sd_file;
 SoftwareSerial ss(GPS_TX_PIN, GPS_RX_PIN);
 arduinoFFT fft = arduinoFFT(); 
+lpfFilter lpf_filt;
 
 // Create program variables...
 double elap_mins = 0.00;
@@ -67,8 +72,10 @@ double initial_lat = 0;
 double initial_long = 0;
 
 long last_lcd_update = 0;
+long last_strk_update = 0;
 
 double aX_samples[ACCEL_SAMPLE_NUM];
+double aX_samples_lpf[ACCEL_SAMPLE_NUM];
 double aY_samples[ACCEL_SAMPLE_NUM];
 double aZ_samples[ACCEL_SAMPLE_NUM];
 long sample_idx = 0;
@@ -83,7 +90,7 @@ char aZ[10] = "";
 bool DEBUG_EN = false;
 bool CAP_STARTED = false;
 bool FIRST_CAP = true;
-bool CALC_FFT_FLAG = false;
+bool PROCESS_SAMPLES_FLAG = false;
 
 char SD_BUF[256];
 
@@ -100,6 +107,7 @@ void setup() {
   accel.begin();
   accel.init(SCALE_2G, ODR_800);
   Timer1.initialize(ACCEL_SAMPLE_RATE_uS);
+  lpfFilter_init(&lpf_filt);
   Serial.println("Initializing SD card...");
   // see if the card is present and can be initialized:
   while (!sd.begin(CS, SPI_HALF_SPEED)){
@@ -179,8 +187,10 @@ void loop() {
       dtostrf(accel.getCalculatedY(), 9, 6, aY);
       dtostrf(accel.getCalculatedZ(), 9, 6, aZ);
   }
-  if (CALC_FFT_FLAG){
-    calc_major_peak();
+  if (PROCESS_SAMPLES_FLAG){
+    //calc_major_peak();
+    filter_accel_data();
+    calc_strk_rate();
   }
 }
 
@@ -192,18 +202,44 @@ void write_to_sd() {
     aZ_samples[sample_idx] =  atof(aZ);
     if (sample_idx == ACCEL_SAMPLE_NUM - 1){
       sample_idx = 0;
-      CALC_FFT_FLAG = true;
+      PROCESS_SAMPLES_FLAG = true;
     }else{
       sample_idx++;
     }
     sprintf(SD_BUF, "Time(mS): %lu\tLog #: %lu\tLatitude: %s\tLongitude: %s\tX-Acceleration: %s\tY-Acceleration: %s\tZ-Acceleration: %s\tGPS Speed (KM/H): %s\n", millis(), log_line_cnt, current_lat, current_long, aX, aY, aZ, current_gps_speed);
     sd_file.print(SD_BUF);
-    Serial.print(SD_BUF);
+    //Serial.print(SD_BUF);
     log_line_cnt++;
   }else{
     FIRST_CAP = false;
   }
 }
+
+void filter_accel_data(){
+  for (int i = 0; i < ACCEL_SAMPLE_NUM; i++){
+    lpfFilter_put(&lpf_filt, aX_samples[i]);
+    aX_samples_lpf[i] = lpfFilter_get(&lpf_filt);
+//    Serial.print(aX_samples[i], 6);
+//    Serial.print("\t");
+//    Serial.print(aX_samples_lpf[i], 6);
+//    Serial.print("\n");
+  }
+}
+
+void calc_strk_rate(){
+  last_strk_update = 0;
+  for (int i = 0; i < ACCEL_SAMPLE_NUM; i++){
+    if ((aX_samples[i] > STRK_ACCEL_THRES) && ((millis() - last_strk_update) >= STRK_DETECT_INTERVAL_mS)){
+      strk_counter++;
+      Serial.println(strk_counter);
+      last_strk_update = millis();
+    }
+  }
+  //get strokes per secs and multiply by 60 (we take 75 samples over 5 secs) 
+  stroke_rate = (strk_counter / 5) * 60;
+  strk_counter = 0;
+}
+
 
 void calc_major_peak(void){
   // Function to calculate FFT of accelerometer samples
@@ -218,7 +254,7 @@ void calc_major_peak(void){
   fft.ComplexToMagnitude(aX_samples, imag_arr, ACCEL_SAMPLE_NUM);
   peak = fft.MajorPeak(aX_samples, ACCEL_SAMPLE_NUM, ACCEL_SAMPLE_FREQ);
   stroke_rate = (peak * 60) + 0.5;
-  CALC_FFT_FLAG = false;
+  PROCESS_SAMPLES_FLAG = false;
 }
 
 void process_distance() {

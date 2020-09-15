@@ -6,13 +6,13 @@
 pkg load signal
 close all;
 
-aX = importdata('../Reliable datasets/x_accel_0.5hz.txt');
+aX = importdata('../Reliable datasets/x_accel_SINGLE_3_SPINS_29-8-2020.txt');
 aX_negated = aX .* -1;
 aY = importdata('../Reliable datasets/y_accel.txt');
 aY_negated = aY .* -1;
 aZ = importdata('../Reliable datasets/z_accel.txt');
 aZ_negated = aZ .* -1;
-time_ms = importdata('../Reliable datasets/sample_num_0.5hz.txt');
+time_ms = importdata('../Reliable datasets/sample_num_SINGLE_3_SPINS_29-8-2020.txt');
 
 ##all_axes_sum =  aX + aY + aZ;
 arr_size = length(aX);
@@ -93,7 +93,7 @@ ylabel('|P1(f)|');
 ##title('Z-Axis One-sided Amplitude Spectrum');
 
 % Low pass filter the data. Cutoff = 1Hz, 2nd order filter
-fpass = 1;
+fpass = 0.1;
 n = 2;
 [b,a] = butter(n,fpass/(fs/2),'low');
 aX_lpf = filter(b,a,aX);
@@ -115,7 +115,7 @@ hold;
 plot(time_ms, aX_avg_arr);
 figure();
 plot(time_ms, aX_lpf);
-title('X-Axis acceleration (low-pass filterted) vs time');
+title('X-Axis acceleration (low-pass filtered) vs time');
 hold;
 plot(time_ms, aX_avg_arr);
 
