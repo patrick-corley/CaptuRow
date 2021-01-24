@@ -3,6 +3,7 @@ import geopy.distance
 import math
 import matplotlib.pyplot as plt
 import numpy as np
+from scipy.signal import butter,filtfilt
 import os
 import sys
 import time
@@ -98,10 +99,28 @@ def plot_accel(plot_all_axes_sum = False, round_precision = 2, x_axis_step = 20,
     x_points = range(start_point, end_point)
     if  plot_all_axes_sum:
         sum_rounded = []
-        for i in range(start_point, end_point):
+        for i in range(end_point - start_point):
             sum_rounded.append(aX_rounded[i] + aY_rounded[i] + aZ_rounded[i])
+        plt.subplot(3,2,1)
         plt.plot(x_points, sum_rounded)
         plt.title('X-Axis + Y-Axis + Z-Axis Acceleration')
+
+        plt.subplot(3,2,2)
+        plt.plot(x_points, aX_rounded)
+        plt.title('X-Axis Acceleration')
+
+        plt.subplot(3,2,3)
+        plt.plot(x_points, aY_rounded)
+        plt.title('Y-Axis Acceleration')
+
+        plt.subplot(3,2,4)
+        plt.plot(x_points, aZ_rounded)
+        plt.title('Z-Axis Acceleration')
+
+        plt.subplot(3,2,5)
+        sum_rounded_lpf = lpf_data(sum_rounded)
+        plt.plot(x_points, sum_rounded_lpf)
+        plt.title('All Axes Sum Low-Pass Filtered')
         plt.xlabel('Sample')
         plt.ylabel('Acceleration (2G normalized)')
         plt.show()
@@ -145,8 +164,49 @@ def avg_accel_data():
     dlog.aY_avg = y_sum / dlog.num_samples
     dlog.aZ_avg = z_sum / dlog.num_samples
 
+def find_g_axis():
+    # Determine which axis/axes gravity is more dominant on
+    print('')
+
+def remove_axis_offset():
+    # Calibrate-out offset in each accel axis channel
+    for i in range(0, dlog.num_samples):
+        if dlog.aX_avg > 0:
+            dlog.aX[i] = float(dlog.aX[i]) - dlog.aX_avg
+        elif dlog.aX_avg < 0:
+            dlog.aX[i] = float(dlog.aX[i]) + dlog.aX_avg
+        else:
+            dlog.aX[i] = float(dlog.aX[i]) + dlog.aX_avg
+        if dlog.aY_avg > 0:
+            dlog.aY[i] = float(dlog.aY[i]) - dlog.aY_avg
+        elif dlog.aY_avg < 0:
+            dlog.aY[i] = float(dlog.aY[i]) + dlog.aY_avg
+        else:
+            dlog.aY[i] = float(dlog.aY[i]) + dlog.aY_avg
+        if dlog.aZ_avg > 0:
+            dlog.aZ[i] = float(dlog.aY[i]) - dlog.aZ_avg
+        elif dlog.aZ_avg < 0:
+            dlog.aZ[i] = float(dlog.aY[i]) + dlog.aZ_avg
+        else:
+            dlog.aZ[i] = float(dlog.aY[i]) + dlog.aZ_avg
+
+def lpf_data(data):
+    # Filter requirements.
+    T = 0.048        # Sample Period
+    fs = 1/T      # sample rate, Hz
+    cutoff = 1.67      # desired cutoff frequency of the filter, Hz ,      slightly higher than actual 1.2 Hz
+    nyq = 0.5 * fs  # Nyquist Frequency
+    order = 2       # sin wave can be approx represented as quadratic
+    n = int(T * fs) # total number of samples
+    
+    normal_cutoff = cutoff / nyq
+    # Get the filter coefficients 
+    b, a = butter(order, normal_cutoff, btype='low', analog=False)
+    y = filtfilt(b, a, data)
+    return y
+
 if __name__ == '__main__':
-    read_file = False
+    read_file = True
     if read_file:
         # Create datalog object
         dlog = datalog()
@@ -168,10 +228,11 @@ if __name__ == '__main__':
         dlog.current_sample = 0
         count_samples()
         avg_accel_data()
+        remove_axis_offset()
         plot_coords(sample_interval=500)
         calc_total_distance()
         calc_max_speed(sample_interval=2500)
-        plot_accel(plot_all_axes_sum=False, round_precision=6, x_axis_step=5, plot_avg=True, start_point=6500, end_point=7000)
+        plot_accel(plot_all_axes_sum=True, round_precision=6, x_axis_step=5, plot_avg=True, start_point=6500, end_point=7000)
     else:
         # Read from Serial Port
         dlog = datalog()
