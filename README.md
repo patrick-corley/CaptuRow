@@ -1,6 +1,10 @@
 # CaptuRow
 Hardware and software platform for capturing and analyzing rowing performance data.
 
+<b>Project Goal</b>: 
+- Develop open-source hardware, firmware and data analysis systems for the niche market of rowing performance monitors.
+- Make useful, reliable performance monitoring systems that can be produced at a low cost and thus, made more accessible for a larger community of individuals in the rowing community.
+
 Folder Structure:  
 
 <b>Arduino</b>:
