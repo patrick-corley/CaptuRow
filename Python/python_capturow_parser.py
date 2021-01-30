@@ -100,7 +100,7 @@ def plot_accel(plot_all_axes_sum = False, round_precision = 2, x_axis_step = 20,
     if  plot_all_axes_sum:
         sum_rounded = []
         for i in range(end_point - start_point):
-            sum_rounded.append(aX_rounded[i] + aY_rounded[i] + aZ_rounded[i])
+            sum_rounded.append((aX_rounded[i] + aY_rounded[i] + aZ_rounded[i]) + 1)
         plt.subplot(3,2,1)
         plt.plot(x_points, sum_rounded)
         plt.title('X-Axis + Y-Axis + Z-Axis Acceleration')
@@ -121,6 +121,11 @@ def plot_accel(plot_all_axes_sum = False, round_precision = 2, x_axis_step = 20,
         sum_rounded_lpf = lpf_data(sum_rounded)
         plt.plot(x_points, sum_rounded_lpf)
         plt.title('All Axes Sum Low-Pass Filtered')
+        plt.xlabel('Sample')
+        plt.ylabel('Acceleration (2G normalized)')
+        sum_rounded_bpf = bpf_data(sum_rounded)
+        plt.plot(x_points, sum_rounded_bpf)
+        plt.title('All Axes Sum Band-Pass Filtered')
         plt.xlabel('Sample')
         plt.ylabel('Acceleration (2G normalized)')
         plt.show()
@@ -190,6 +195,30 @@ def remove_axis_offset():
         else:
             dlog.aZ[i] = float(dlog.aY[i]) + dlog.aZ_avg
 
+def gen_dummy_data():
+    # Generate dummy data for debug purposes.
+    # Sine wave function (of freq (Hz)) = A*Sin(2*pi*f*t)
+    A = 1
+    f = 0.34        # ~20 strokes/min
+    fs = 25         # 25 samples/sec
+    start_time = 0
+    end_time = 60
+    
+    t = np.arange(start_time, end_time, 1/fs)
+    sin_data = A*np.sin(2*math.pi*f*t)
+
+    # Add HF noise
+    A_noise = 0.2
+    f_noise = 3.4
+    noise_data = A_noise*np.sin(2*math.pi*f_noise*t)
+
+    plt.figure()
+    plt.plot(t, sin_data + noise_data)   
+    plt.title('Dummy Sine Data')
+    plt.xlabel('time')
+    plt.ylabel('Amplitude')
+    plt.show()
+
 def lpf_data(data):
     # Filter requirements.
     T = 0.048        # Sample Period
@@ -205,7 +234,28 @@ def lpf_data(data):
     y = filtfilt(b, a, data)
     return y
 
+def bpf_data(data):
+    # Filter requirements.
+    T = 0.048        # Sample Period
+    fs = 1/T      # sample rate, Hz
+    cutoff_low = 0.5
+    cutoff_high = 1.67      # desired cutoff frequency of the filter, Hz ,      slightly higher than actual 1.2 Hz
+    nyq = 0.5 * fs  # Nyquist Frequency
+    order = 1       # sin wave can be approx represented as quadratic
+    n = int(T * fs) # total number of samples
+    
+    normal_cutoff_low = cutoff_low / nyq
+    normal_cutoff_high = cutoff_high / nyq
+
+    # Get the filter coefficients 
+    b, a = butter(order, [normal_cutoff_low, normal_cutoff_high], btype='bandpass', analog=False)
+    y = filtfilt(b, a, data)
+    return y
+
 if __name__ == '__main__':
+
+    gen_dummy_data()
+
     read_file = True
     if read_file:
         # Create datalog object
