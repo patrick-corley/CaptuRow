@@ -201,12 +201,8 @@ def remove_offset(data):
     for value in data:
         sum += value
     mean = sum / len(data)
-    if (mean > 0):
-        for i, value in enumerate(data):
-            data[i] = value + mean
-    else:
-        for i, value in enumerate(data):
-            data[i] = value - mean
+    for i, value in enumerate(data):
+        data[i] = value - mean
     return data
 
 def gen_dummy_data(f, sample_period, start_time, end_time):
