@@ -96,62 +96,64 @@ def plot_accel(plot_all_axes_sum = False, round_precision = 2, x_axis_step = 20,
         aY_rounded.append(round(float(dlog.aY[i]), round_precision))
         aZ_rounded.append(round(float(dlog.aZ[i]), round_precision))
 
-    x_points = range(start_point, end_point)
+    x_points = np.arange(start_point, end_point, 1)
     if  plot_all_axes_sum:
         
-        plt.subplot(3,3,1)
+        plt.subplot(3,2,1)
         plt.plot(x_points, aX_rounded)
         plt.title('X-Axis Acceleration')
 
-        plt.subplot(3,3,2)
+        plt.subplot(3,2,2)
         plt.plot(x_points, aY_rounded)
         plt.title('Y-Axis Acceleration')
 
-        plt.subplot(3,3,3)
+        plt.subplot(3,2,3)
         plt.plot(x_points, aZ_rounded)
         plt.title('Z-Axis Acceleration')
 
         sum_rounded = []
-        for i in range(end_point - start_point):
+        for i in range(0, len(x_points)):
             sum_rounded.append((aX_rounded[i] + aY_rounded[i] + aZ_rounded[i]))
-        plt.subplot(3,3,4)
+        plt.subplot(3,2,4)
         plt.plot(x_points, sum_rounded)
         plt.title('X-Axis + Y-Axis + Z-Axis Acceleration')
 
         sum_rounded = remove_offset(sum_rounded)
+        zero_mrkr = generate_zero_mrkr(length=len(x_points))
 
-        plt.subplot(3,3,5)
+        plt.subplot(3,2,5)
+        plt.plot(x_points, sum_rounded)
+        plt.plot(x_points, zero_mrkr, ':')
+        plt.title('All Axes Sum Gravity Calibrated-Out')
+        plt.xlabel('Sample')
+        plt.ylabel('Acceleration (2G normalized)')
+
+        plt.subplot(3,2,6)
+        #sum_rounded_lpf = lpf_data(data=sum_rounded, cutoff=1.67, sample_period=0.122)
+        #sum_rounded_lpf = lpf_data(data=sum_rounded, cutoff=0.835, sample_period=0.122)
         sum_rounded_lpf = lpf_data(data=sum_rounded, cutoff=1.67, sample_period=0.122)
         plt.plot(x_points, sum_rounded_lpf)
+        plt.plot(x_points, zero_mrkr, ':')
         plt.title('All Axes Sum Low-Pass Filtered')
         plt.xlabel('Sample')
         plt.ylabel('Acceleration (2G normalized)')
-        
-        plt.subplot(3,3,6)
-        #sum_rounded_bpf = bpf_data(data=sum_rounded, cutoff_low=0.3, cutoff_high=1.67, sample_period=0.122)
-        sum_rounded_bpf = hpf_data(data=sum_rounded_lpf, cutoff=0.0167,sample_period=0.122 )
-        plt.plot(x_points, sum_rounded_bpf)
-        plt.title('All Axes Sum Band-Pass Filtered')
-        plt.xlabel('Sample')
-        plt.ylabel('Acceleration (2G normalized)')
-
-        [t, dummy_data] = gen_dummy_data(f=0.34, sample_period=0.122, start_time=0, end_time=60)
-        plt.subplot(3,3,7)
-        plt.plot(t, dummy_data)
-        plt.title('Noisy Dummy Data')
-        plt.xlabel('Time')
-        plt.ylabel('Amplitude')
-
-        #lpf_dummy_data = lpf_data(data=dummy_data, cutoff=1.67, sample_period=0.122)
-        lpf_dummy_data = lpf_data(data=dummy_data, cutoff=0.5, sample_period=0.122)
-        plt.subplot(3,3,8)
-        plt.plot(t, lpf_dummy_data)
-        plt.title('LPF Noisy Dummy Data')
-        plt.xlabel('Time')
-        plt.ylabel('Amplitude')
         plt.show()
-        
 
+        # [t, dummy_data] = gen_dummy_data(f=0.34, sample_period=0.122, start_time=0, end_time=60)
+        # plt.subplot(3,3,7)
+        # plt.plot(t, dummy_data)
+        # plt.title('Noisy Dummy Data')
+        # plt.xlabel('Time')
+        # plt.ylabel('Amplitude')
+
+        # #lpf_dummy_data = lpf_data(data=dummy_data, cutoff=1.67, sample_period=0.122)
+        # lpf_dummy_data = lpf_data(data=dummy_data, cutoff=0.5, sample_period=0.122)
+        # plt.subplot(3,3,8)
+        # plt.plot(t, lpf_dummy_data)
+        # plt.title('LPF Noisy Dummy Data')
+        # plt.xlabel('Time')
+        # plt.ylabel('Amplitude')
+        # plt.show()
     else:
         plt.subplot(3,1,1)
         plt.plot(x_points, aX_rounded)
@@ -204,6 +206,10 @@ def remove_offset(data):
     for i, value in enumerate(data):
         data[i] = value - mean
     return data
+
+def generate_zero_mrkr(length):
+    mrkr = np.zeros(length)
+    return mrkr
 
 def gen_dummy_data(f, sample_period, start_time, end_time):
     # Generate dummy data for debug purposes.
@@ -293,7 +299,8 @@ if __name__ == '__main__':
         plot_coords(sample_interval=500)
         calc_total_distance()
         calc_max_speed(sample_interval=2500)
-        plot_accel(plot_all_axes_sum=True, round_precision=6, x_axis_step=5, plot_avg=True, start_point=6500, end_point=7000)
+        #plot_accel(plot_all_axes_sum=True, round_precision=6, x_axis_step=5, plot_avg=True, start_point=6500, end_point=7000)
+        plot_accel(plot_all_axes_sum=True, round_precision=6, x_axis_step=5, plot_avg=True, start_point=3500, end_point=5000)
     else:
         # Read from Serial Port
         dlog = datalog()
